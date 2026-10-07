@@ -7,6 +7,7 @@ import typer
 from . import __version__
 from .config import load_config
 from .engine import scan_path
+from .errors import AegisScanError
 from .reporters import render_terminal, write_html, write_json, write_sarif
 from .rules import RULE_CATALOG
 
@@ -24,8 +25,14 @@ def scan(
 ) -> None:
     """Scan Terraform and Kubernetes configuration for security misconfigurations."""
     resolved = target.resolve()
-    config = load_config(resolved, config_path)
-    findings, files_scanned = scan_path(resolved, config=config)
+
+    try:
+        config = load_config(resolved, config_path)
+        findings, files_scanned = scan_path(resolved, config=config)
+    except AegisScanError as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(code=2) from exc
+
     render_terminal(findings, files_scanned)
 
     if json_output:
@@ -38,13 +45,14 @@ def scan(
         write_sarif(findings, sarif_output)
         typer.echo(f"SARIF report written to {sarif_output}")
 
-    threshold = (fail_on or config.fail_on or "high").lower()
+    threshold = str(fail_on or config.fail_on or "high").lower()
     allowed = {"critical", "high", "medium", "low", "none"}
     if threshold not in allowed:
-        raise typer.BadParameter(f"fail-on must be one of: {', '.join(sorted(allowed))}")
+        typer.echo(f"Error: fail-on must be one of: {', '.join(sorted(allowed))}", err=True)
+        raise typer.Exit(code=2)
 
     if threshold != "none" and _should_fail(findings, threshold):
-        raise typer.Exit(code=2)
+        raise typer.Exit(code=1)
 
 
 @app.command("rules")
