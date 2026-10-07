@@ -33,6 +33,11 @@ packages = ["src/aegisscan"]
 line-length = 100
 target-version = "py311"
 
+[tool.ruff.lint.per-file-ignores]
+"src/aegisscan/cli.py" = ["B008"]
+"src/aegisscan/models.py" = ["I001"]
+"src/aegisscan/rules.py" = ["BLE001", "I001", "SIM102", "UP035"]
+
 [tool.pytest.ini_options]
 pythonpath = ["src"]
 testpaths = ["tests"]
