@@ -1,45 +1,33 @@
 # AegisScan
 
-**AegisScan** is a Python CLI security scanner for Terraform and Kubernetes configuration. It detects cloud and workload misconfigurations before they reach production using its own first-party rule engine and Aegis rule IDs.
+**AegisScan** is a Python CLI security scanner for Terraform and Kubernetes configuration. It detects cloud and workload misconfigurations before they reach production using its own first-party rule engine and stable Aegis rule IDs.
 
 ```bash
 aegisscan scan .
 ```
 
-## Current capabilities
+## AegisScan v0.2
 
-AegisScan currently supports:
+AegisScan currently includes:
 
-- Terraform (`.tf`) scanning
-- Kubernetes YAML (`.yaml`, `.yml`) scanning
+- structured Terraform HCL parsing
+- Kubernetes YAML parsing
+- 31 built-in AWS and Kubernetes security rules
 - custom Aegis rule IDs
-- severity-based findings
-- remediation guidance
+- Critical / High / Medium / Low severity levels
+- actionable remediation guidance
 - project security score (`0-100`) and grade (`A-F`)
 - JSON reports
 - branded HTML reports
 - SARIF output for GitHub Code Scanning
 - `.aegisscan.yml` configuration
 - path exclusions
-- rule disabling
-- minimum severity filtering
-- file-level rule suppression
+- disabled-rule configuration
+- minimum-severity filtering
+- file-level suppressions
 - CI security gates with `--fail-on`
-
-## Current rules
-
-| Rule | Severity | Check |
-| --- | --- | --- |
-| `AEGIS-AWS-001` | High | Public ingress from `0.0.0.0/0` |
-| `AEGIS-AWS-002` | Critical | Public S3 ACL |
-| `AEGIS-AWS-003` | Critical | Publicly accessible RDS |
-| `AEGIS-AWS-004` | Medium | EBS encryption not explicitly enabled |
-| `AEGIS-AWS-005` | High | Wildcard IAM actions |
-| `AEGIS-K8S-001` | Medium | LoadBalancer service exposure |
-| `AEGIS-K8S-002` | Critical | Privileged container |
-| `AEGIS-K8S-003` | High | Privilege escalation not disabled |
-| `AEGIS-K8S-004` | Medium | Missing CPU/memory requests or limits |
-| `AEGIS-K8S-005` | Medium | Mutable or unpinned container image |
+- vulnerable and hardened example configurations
+- automated linting, tests, CLI validation, and clean-example verification in GitHub Actions
 
 ## Installation
 
@@ -60,10 +48,10 @@ pip install -e .
 ## Usage
 
 ```bash
-# Scan current directory
+# Scan the current project
 aegisscan scan .
 
-# Scan a specific infrastructure directory
+# Scan one infrastructure directory
 aegisscan scan ./terraform
 
 # Generate reports
@@ -71,19 +59,22 @@ aegisscan scan . --json reports/aegisscan.json
 aegisscan scan . --html reports/aegisscan.html
 aegisscan scan . --sarif reports/aegisscan.sarif
 
-# CI security gate
+# Fail CI when High or Critical findings exist
 aegisscan scan . --fail-on high
 
-# Use a specific configuration file
+# Use a project configuration file
 aegisscan scan . --config .aegisscan.yml
 
 # List built-in rules
 aegisscan rules
+
+# Show version
+aegisscan version
 ```
 
 ## Configuration
 
-Copy `.aegisscan.yml.example` to `.aegisscan.yml` and customize it:
+Copy `.aegisscan.yml.example` to `.aegisscan.yml`:
 
 ```yaml
 scan:
@@ -100,19 +91,26 @@ ci:
   fail_on: high
 ```
 
-A rule can also be intentionally suppressed for a file:
+A reviewed finding can also be suppressed at file level:
 
 ```text
 # aegisscan:ignore AEGIS-AWS-001
 ```
 
-Suppressions should be used only when the risk is understood and accepted.
+Suppressions should represent deliberate risk acceptance, not a way to hide unresolved findings.
+
+## Rule coverage
+
+AegisScan v0.2 ships with **31 rules**:
+
+- **14 AWS / Terraform rules** covering public exposure, IAM wildcard permissions, S3 controls, RDS/EBS/EFS encryption, CloudTrail, KMS, EC2 public IPs, IMDSv2, and root-volume encryption.
+- **17 Kubernetes rules** covering public service exposure, privileged workloads, privilege escalation, root execution, writable root filesystems, Linux capabilities, host namespaces, hostPath, service-account tokens, seccomp, probes, resources, mutable images, and NodePort.
+
+See [`docs/rules.md`](docs/rules.md) for the full rule reference and remediation guidance.
 
 ## Security score
 
-AegisScan calculates a simple risk-weighted score from `0-100`, where `100` means no enabled AegisScan findings were detected. Critical and high-severity findings reduce the score more heavily than medium and low findings.
-
-Example:
+AegisScan calculates a simple risk-weighted score from `0-100`. Critical and High findings reduce the score more heavily than Medium and Low findings.
 
 ```text
 AegisScan Cloud & IaC Security Scanner
@@ -125,9 +123,9 @@ The score is a prioritization aid, not a compliance certification.
 
 **JSON** is intended for automation and downstream processing.
 
-**HTML** provides a recruiter/team-friendly security report with the project score, findings, locations, and remediation guidance.
+**HTML** provides a readable security report with score, findings, locations, and remediation guidance.
 
-**SARIF** allows AegisScan results to be consumed by compatible code-scanning systems such as GitHub Code Scanning workflows.
+**SARIF** allows AegisScan findings to be consumed by compatible code-scanning systems such as GitHub Code Scanning.
 
 ## Repository structure
 
@@ -135,23 +133,31 @@ The score is a prioritization aid, not a compliance certification.
 src/aegisscan/
 ├── cli.py          # CLI commands and CI exit behavior
 ├── config.py       # .aegisscan.yml configuration
-├── engine.py       # file discovery, filtering, suppression, orchestration
+├── engine.py       # discovery, filtering, suppressions, orchestration
 ├── models.py       # finding models
-├── reporters.py    # terminal, JSON, HTML and SARIF reporting
-├── rules.py        # first-party AegisScan detection rules
+├── reporters.py    # terminal, JSON, HTML and SARIF output
+├── rules.py        # first-party Terraform/Kubernetes detection rules
 └── scoring.py      # risk score and grade calculation
 
-tests/              # rule, configuration and engine tests
-examples/vulnerable # intentionally insecure IaC samples
-.github/workflows/  # CI validation
+docs/
+└── rules.md        # rule reference and remediation guidance
+
+examples/
+├── vulnerable/     # intentionally insecure fixtures
+└── secure/         # hardened fixtures expected to scan clean
+
+tests/              # rule and engine tests
+.github/workflows/  # automated CI validation
 ```
 
 ## Design principles
 
-AegisScan is intentionally being developed as its own security tool rather than a wrapper around Checkov, Trivy, or another scanner. The goal is to keep the detection logic understandable, testable, extensible, and suitable for DevSecOps workflows.
+AegisScan is intentionally built as its own security tool rather than as a wrapper around Checkov, Trivy, or another scanner. The goal is to keep detection logic understandable, testable, extensible, and suitable for DevSecOps workflows.
 
 ## Project status
 
-**Product foundation implemented.** Configuration, exclusions, rule suppressions, security scoring, JSON/HTML/SARIF reporting, CI gating, initial AWS/Kubernetes rules, vulnerable examples, tests, and packaging are in place.
+**v0.2 product milestone implemented.**
 
-Next development focus: stronger structured Terraform analysis, a larger AWS/Kubernetes rule library, per-rule documentation, additional false-positive tests, and tighter GitHub Code Scanning integration.
+The repository now contains the CLI, structured Terraform and Kubernetes scanning, 31 first-party rules, configuration and suppressions, scoring, JSON/HTML/SARIF reporting, hardened and vulnerable fixtures, automated tests, and CI validation.
+
+Future work can focus on additional cloud providers, deeper expression evaluation, policy packs, package publishing, and broader real-world fixture coverage rather than basic project scaffolding.
