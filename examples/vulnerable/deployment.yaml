@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vulnerable-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vulnerable-app
+  template:
+    metadata:
+      labels:
+        app: vulnerable-app
+    spec:
+      containers:
+        - name: app
+          image: nginx:latest
+          securityContext:
+            privileged: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vulnerable-app
+spec:
+  selector:
+    app: vulnerable-app
+  ports:
+    - port: 80
+      targetPort: 80
+  type: LoadBalancer
