@@ -1,0 +1,15 @@
+scan:
+  minimum_severity: low
+  ignore_paths:
+    - "examples/**"
+    - "vendor/**"
+
+rules:
+  disabled:
+    - AEGIS-K8S-001
+
+ci:
+  fail_on: high
+
+# File-level suppression is also supported inside Terraform/YAML files:
+# aegisscan:ignore AEGIS-AWS-001
