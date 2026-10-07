@@ -14,6 +14,7 @@ resource "aws_security_group" "web" {
 }
 resource "aws_db_instance" "db" {
   publicly_accessible = true
+  storage_encrypted   = true
 }
 ''',
         encoding="utf-8",
