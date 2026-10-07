@@ -8,6 +8,7 @@ from . import __version__
 from .config import load_config
 from .engine import scan_path
 from .reporters import render_terminal, write_html, write_json, write_sarif
+from .rules import RULE_CATALOG
 
 app = typer.Typer(add_completion=False, help="AegisScan - Cloud & IaC Security Scanner")
 
@@ -49,19 +50,7 @@ def scan(
 @app.command("rules")
 def list_rules() -> None:
     """List built-in AegisScan rule identifiers."""
-    rules = [
-        ("AEGIS-AWS-001", "HIGH", "Public ingress exposure"),
-        ("AEGIS-AWS-002", "CRITICAL", "Public S3 bucket ACL"),
-        ("AEGIS-AWS-003", "CRITICAL", "Publicly accessible database"),
-        ("AEGIS-AWS-004", "MEDIUM", "EBS encryption not explicitly enabled"),
-        ("AEGIS-AWS-005", "HIGH", "Wildcard IAM action"),
-        ("AEGIS-K8S-001", "MEDIUM", "Externally exposed LoadBalancer service"),
-        ("AEGIS-K8S-002", "CRITICAL", "Privileged container"),
-        ("AEGIS-K8S-003", "HIGH", "Privilege escalation not disabled"),
-        ("AEGIS-K8S-004", "MEDIUM", "Missing resource requests or limits"),
-        ("AEGIS-K8S-005", "MEDIUM", "Mutable container image tag"),
-    ]
-    for rule_id, severity, title in rules:
+    for rule_id, severity, title in RULE_CATALOG:
         typer.echo(f"{rule_id:<15} {severity:<8} {title}")
 
 
