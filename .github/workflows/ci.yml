@@ -33,4 +33,11 @@ jobs:
         run: |
           aegisscan version
           aegisscan rules
-          aegisscan scan examples/vulnerable --fail-on none --json aegisscan-report.json
+          mkdir -p reports
+          aegisscan scan examples/vulnerable --fail-on none \
+            --json reports/aegisscan.json \
+            --html reports/aegisscan.html \
+            --sarif reports/aegisscan.sarif
+
+      - name: Verify hardened examples are clean
+        run: aegisscan scan examples/secure --fail-on low
